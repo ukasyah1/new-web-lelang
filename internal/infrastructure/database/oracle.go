@@ -18,7 +18,7 @@ func OpenOracle(jdbcURL, username, password string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_URL, DATABASE_USERNAME, dan DATABASE_PASSWORD wajib diisi")
 	}
 
-	dsn, err := oracleDSN(jdbcURL, username, password)
+	dsn, err := BuildOracleDSN(jdbcURL, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func OpenOracle(jdbcURL, username, password string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func oracleDSN(jdbcURL, username, password string) (string, error) {
+func BuildOracleDSN(jdbcURL, username, password string) (string, error) {
 	address := strings.TrimSpace(jdbcURL)
 	address = strings.TrimPrefix(address, "jdbc:oracle:thin:@")
 	address = strings.TrimPrefix(address, "//")

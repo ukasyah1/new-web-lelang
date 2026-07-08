@@ -15,7 +15,7 @@ type Migration struct {
 	Version     string
 	Description string
 	Checksum    string
-	Up          func(db *gorm.DB, schema string) error
+	SQL         string
 }
 
 type schemaMigration struct {
@@ -60,12 +60,20 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 		}
 		if result.RowsAffected > 0 {
 			if applied.Checksum != item.Checksum {
+				if applied.Version == "001" && applied.Checksum == "v001-create-gorm-migration-example-v1" {
+					if err := historyDB.Model(&schemaMigration{}).
+						Where("VERSION = ?", applied.Version).
+						Update("CHECKSUM", item.Checksum).Error; err != nil {
+						return fmt.Errorf("upgrade migration %s checksum: %w", item.Version, err)
+					}
+					continue
+				}
 				return fmt.Errorf("migration %s checksum berubah setelah diterapkan", item.Version)
 			}
 			continue
 		}
 
-		if err := item.Up(db, schema); err != nil {
+		if err := executeSQLScript(db, item.SQL); err != nil {
 			return fmt.Errorf("apply migration %s (%s): %w", item.Version, item.Description, err)
 		}
 
@@ -81,6 +89,84 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 	}
 
 	return nil
+}
+
+func executeSQLScript(db *gorm.DB, script string) error {
+	for _, statement := range splitSQLStatements(script) {
+		if err := db.Exec(statement).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func splitSQLStatements(script string) []string {
+	var statements []string
+	start := 0
+	inSingleQuote := false
+	inDoubleQuote := false
+	inLineComment := false
+	inBlockComment := false
+
+	for i := 0; i < len(script); i++ {
+		current := script[i]
+		next := byte(0)
+		if i+1 < len(script) {
+			next = script[i+1]
+		}
+
+		if inLineComment {
+			if current == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+		if inBlockComment {
+			if current == '*' && next == '/' {
+				inBlockComment = false
+				i++
+			}
+			continue
+		}
+		if !inSingleQuote && !inDoubleQuote && current == '-' && next == '-' {
+			inLineComment = true
+			i++
+			continue
+		}
+		if !inSingleQuote && !inDoubleQuote && current == '/' && next == '*' {
+			inBlockComment = true
+			i++
+			continue
+		}
+		if current == '\'' && !inDoubleQuote {
+			if inSingleQuote && next == '\'' {
+				i++
+				continue
+			}
+			inSingleQuote = !inSingleQuote
+			continue
+		}
+		if current == '"' && !inSingleQuote {
+			if inDoubleQuote && next == '"' {
+				i++
+				continue
+			}
+			inDoubleQuote = !inDoubleQuote
+			continue
+		}
+		if current == ';' && !inSingleQuote && !inDoubleQuote {
+			statement := strings.TrimSpace(script[start:i])
+			if statement != "" {
+				statements = append(statements, statement)
+			}
+			start = i + 1
+		}
+	}
+
+	if statement := strings.TrimSpace(script[start:]); statement != "" {
+		statements = append(statements, statement)
+	}
+	return statements
 }
 
 var oracleIdentifierPattern = regexp.MustCompile(`^[A-Z][A-Z0-9_$#]*$`)
@@ -122,8 +208,8 @@ func oracleTableExists(db *gorm.DB, schema, table string) (bool, error) {
 }
 
 func validateMigration(item Migration, seen map[string]struct{}) error {
-	if item.Version == "" || item.Description == "" || item.Checksum == "" || item.Up == nil {
-		return fmt.Errorf("migration version, description, checksum, dan Up wajib diisi")
+	if item.Version == "" || item.Description == "" || item.Checksum == "" || strings.TrimSpace(item.SQL) == "" {
+		return fmt.Errorf("migration version, description, checksum, dan SQL wajib diisi")
 	}
 	if _, exists := seen[item.Version]; exists {
 		return fmt.Errorf("migration version %s duplikat", item.Version)

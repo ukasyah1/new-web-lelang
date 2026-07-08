@@ -109,7 +109,11 @@ func buildAwardHandler(config appConfig) (*httpapi.AwardHandler, error) {
 		return nil, err
 	}
 	if config.runMigrations {
-		if err := database.RunMigrations(db, config.migrationSchema, database.AllMigrations()); err != nil {
+		available, err := database.AllMigrations()
+		if err != nil {
+			return nil, fmt.Errorf("load database migrations: %w", err)
+		}
+		if err := database.RunMigrations(db, config.migrationSchema, available); err != nil {
 			return nil, fmt.Errorf("run database migrations: %w", err)
 		}
 	}
