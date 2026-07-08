@@ -1,0 +1,9 @@
+.git
+.agents
+.env
+*.db
+*.db-shm
+*.db-wal
+*.exe
+bin
+coverage.out
