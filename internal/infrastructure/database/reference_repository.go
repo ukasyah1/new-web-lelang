@@ -10,30 +10,61 @@ import (
 )
 
 type categoryModel struct {
-	ID   string `gorm:"primaryKey"`
-	Name string `gorm:"not null"`
+	ID   string `gorm:"column:ID;primaryKey"`
+	Name string `gorm:"column:NAMA_KATEGORI;not null"`
+}
+
+func (categoryModel) TableName() string {
+	return "M_KATEGORI"
 }
 
 type assetTypeModel struct {
-	ID         string `gorm:"primaryKey"`
-	CategoryID string `gorm:"not null;index"`
-	Name       string `gorm:"not null"`
+	ID         string `gorm:"column:ID;primaryKey"`
+	CategoryID string `gorm:"column:KATEGORI_ID;not null;index"`
+	Name       string `gorm:"column:NAMA_TIPE;not null"`
+}
+
+func (assetTypeModel) TableName() string {
+	return "M_TIPE_ASET"
 }
 
 type provinceModel struct {
-	ID   string `gorm:"primaryKey"`
-	Name string `gorm:"not null"`
+	ID   string `gorm:"column:ID;primaryKey"`
+	Name string `gorm:"column:NAMA_PROVINSI;not null"`
+}
+
+func (provinceModel) TableName() string {
+	return "M_PROVINSI"
+}
+
+type cityModel struct {
+	ID         string `gorm:"column:ID;primaryKey"`
+	ProvinceID string `gorm:"column:PROVINSI_ID;not null;index"`
+	Name       string `gorm:"column:NAMA_KOTA;not null"`
+	CodePrefix string `gorm:"column:KODE_PREFIX"`
+}
+
+func (cityModel) TableName() string {
+	return "M_KOTA"
 }
 
 type salesMethodModel struct {
-	ID   string `gorm:"primaryKey"`
-	Name string `gorm:"not null"`
+	ID   string `gorm:"column:ID;primaryKey"`
+	Name string `gorm:"column:NAMA_METODE;not null"`
+}
+
+func (salesMethodModel) TableName() string {
+	return "M_METODE_PENJUALAN"
 }
 
 type kpknlModel struct {
-	ID   string `gorm:"primaryKey"`
-	Code string `gorm:"not null;uniqueIndex"`
-	Name string `gorm:"not null"`
+	ID   string `gorm:"column:ID;primaryKey"`
+	Code string `gorm:"column:KODE_KPKNL;not null;uniqueIndex"`
+	Name string `gorm:"column:NAMA_KANTOR;not null"`
+}
+
+func (kpknlModel) TableName() string {
+	return "M_KPKNL"
 }
 
 type ReferenceRepository struct {
@@ -50,6 +81,7 @@ func (r *ReferenceRepository) Prepare() error {
 		&categoryModel{},
 		&assetTypeModel{},
 		&provinceModel{},
+		&cityModel{},
 		&salesMethodModel{},
 		&kpknlModel{},
 	); err != nil {
@@ -69,6 +101,9 @@ func (r *ReferenceRepository) seed() error {
 			&assetTypeModel{ID: "uuid-3", CategoryID: "uuid-2", Name: "Mobil"},
 			&provinceModel{ID: "uuid-1", Name: "DKI Jakarta"},
 			&provinceModel{ID: "uuid-2", Name: "Jawa Barat"},
+			&cityModel{ID: "uuid-1", ProvinceID: "uuid-1", Name: "Jakarta Pusat", CodePrefix: "JKP"},
+			&cityModel{ID: "uuid-2", ProvinceID: "uuid-1", Name: "Jakarta Selatan", CodePrefix: "JKS"},
+			&cityModel{ID: "uuid-3", ProvinceID: "uuid-2", Name: "Bandung", CodePrefix: "BDG"},
 			&salesMethodModel{ID: "uuid-1", Name: "Lelang"},
 			&salesMethodModel{ID: "uuid-2", Name: "Jual Damai"},
 			&kpknlModel{ID: "uuid-1", Code: "KPKNL-JKT1", Name: "KPKNL Jakarta I"},
@@ -132,5 +167,21 @@ func (r *ReferenceRepository) GetAll(ctx context.Context) (reference.Data, error
 		result.KPKNLs[i] = reference.KPKNL{ID: item.ID, Code: item.Code, Name: item.Name}
 	}
 
+	return result, nil
+}
+
+func (r *ReferenceRepository) GetCitiesByProvinceID(ctx context.Context, provinceID string) ([]reference.City, error) {
+	var cities []cityModel
+	if err := r.db.WithContext(ctx).
+		Where("PROVINSI_ID = ?", provinceID).
+		Order("ID").
+		Find(&cities).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]reference.City, len(cities))
+	for i, item := range cities {
+		result[i] = reference.City{ID: item.ID, ProvinceID: item.ProvinceID, Name: item.Name}
+	}
 	return result, nil
 }

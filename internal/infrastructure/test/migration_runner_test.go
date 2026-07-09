@@ -60,11 +60,17 @@ func TestLoadExampleSQLMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load SQL migrations: %v", err)
 	}
-	if len(migrations) != 1 || migrations[0].Version != "001" {
+	if len(migrations) != 4 ||
+		migrations[0].Version != "001" ||
+		migrations[1].Version != "002" ||
+		migrations[2].Version != "003" ||
+		migrations[3].Version != "004" {
 		t.Fatalf("unexpected migrations: %+v", migrations)
 	}
-	if migrations[0].SQL == "" || migrations[0].Checksum == "" {
-		t.Fatal("expected SQL and checksum to be loaded")
+	for _, migration := range migrations {
+		if migration.SQL == "" || migration.Checksum == "" {
+			t.Fatalf("expected SQL and checksum to be loaded for migration %s", migration.Version)
+		}
 	}
 }
 

@@ -1,16 +1,24 @@
-package infrastructure_test
+package reference_test
 
 import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"new-website-lelang/internal/domain/catalog"
+	"new-website-lelang/internal/domain/reference"
+	"new-website-lelang/internal/infrastructure/memory"
+	"new-website-lelang/internal/interfaces/httpapi"
 )
 
 func TestGetReferenceData(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/reference-data", nil)
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, request)
+
+	router.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
@@ -33,18 +41,27 @@ func TestGetReferenceData(t *testing.T) {
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.Status != "success" || len(response.Data.Categories) != 2 {
-		t.Fatalf("unexpected response: %+v", response)
+	if response.Status != "success" {
+		t.Fatalf("expected success status, got %q", response.Status)
 	}
-	if response.Data.AssetTypes[2].Name != "Mobil" || response.Data.KPKNLs[0].Code != "KPKNL-JKT1" {
-		t.Fatalf("unexpected reference values: %+v", response.Data)
+	if len(response.Data.Categories) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(response.Data.Categories))
+	}
+	if response.Data.AssetTypes[2].Name != "Mobil" {
+		t.Fatalf("expected third asset type to be Mobil, got %q", response.Data.AssetTypes[2].Name)
+	}
+	if response.Data.KPKNLs[0].Code != "KPKNL-JKT1" {
+		t.Fatalf("unexpected first KPKNL code: %q", response.Data.KPKNLs[0].Code)
 	}
 }
 
 func TestGetMasterData(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data", nil)
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, request)
+
+	router.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
@@ -75,21 +92,26 @@ func TestGetMasterData(t *testing.T) {
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.Status != "success" ||
-		response.Data.Categories[0].Name != "Properti" ||
+	if response.Status != "success" {
+		t.Fatalf("expected success status, got %q", response.Status)
+	}
+	if response.Data.Categories[0].Name != "Properti" ||
 		response.Data.AssetTypes[0].CategoryID != "uuid-1" ||
 		response.Data.Provinces[0].Name != "DKI Jakarta" ||
 		response.Data.SalesMethods[0].Name != "Lelang" ||
 		response.Data.KPKNLs[0].Code != "KPKNL-JKT1" ||
 		response.Data.KPKNLs[0].Name != "KPKNL Jakarta I" {
-		t.Fatalf("unexpected master data response: %+v", response)
+		t.Fatalf("unexpected master data response: %+v", response.Data)
 	}
 }
 
 func TestGetCitiesByProvince(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data/kota?provinsi_id=uuid-1", nil)
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, request)
+
+	router.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
@@ -106,18 +128,23 @@ func TestGetCitiesByProvince(t *testing.T) {
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.Status != "success" ||
-		len(response.Data) != 2 ||
+	if response.Status != "success" || len(response.Data) != 2 {
+		t.Fatalf("unexpected city response: %+v", response)
+	}
+	if response.Data[0].ID != "uuid-1" ||
 		response.Data[0].ProvinceID != "uuid-1" ||
 		response.Data[0].Name != "Jakarta Pusat" {
-		t.Fatalf("unexpected city response: %+v", response)
+		t.Fatalf("unexpected first city: %+v", response.Data[0])
 	}
 }
 
 func TestGetCitiesByProvinceRequiresProvinceID(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data/kota", nil)
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, request)
+
+	router.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, recorder.Code)
@@ -125,11 +152,17 @@ func TestGetCitiesByProvinceRequiresProvinceID(t *testing.T) {
 }
 
 func TestReferenceDataRejectsUnsupportedMethod(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/reference-data", nil)
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusMethodNotAllowed || recorder.Header().Get("Allow") != http.MethodGet {
-		t.Fatalf("unexpected method response: status=%d allow=%q", recorder.Code, recorder.Header().Get("Allow"))
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, recorder.Code)
+	}
+	if recorder.Header().Get("Allow") != http.MethodGet {
+		t.Fatalf("expected Allow header to be GET")
 	}
 }

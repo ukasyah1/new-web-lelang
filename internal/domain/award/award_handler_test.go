@@ -1,4 +1,4 @@
-package httpapi
+package award
 
 import (
 	"context"
@@ -8,21 +8,20 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"new-website-lelang/internal/domain/award"
 )
 
 type fakeAwardRepository struct {
-	records []award.Award
+	records []Award
 	err     error
 }
 
-func (r fakeAwardRepository) GetAll(_ context.Context) ([]award.Award, error) {
+func (r fakeAwardRepository) GetAll(_ context.Context) ([]Award, error) {
 	return r.records, r.err
 }
 
 func TestGetAwards(t *testing.T) {
 	fileName := "award.png"
-	service := award.NewService(fakeAwardRepository{records: []award.Award{
+	service := NewService(fakeAwardRepository{records: []Award{
 		{ID: "uuid-award-1", FileName: &fileName},
 	}})
 	handler := NewAwardHandler(service)

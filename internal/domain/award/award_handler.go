@@ -1,18 +1,17 @@
-package httpapi
+package award
 
 import (
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"new-website-lelang/internal/domain/award"
 )
 
 type AwardHandler struct {
-	service *award.Service
+	service *Service
 }
 
-func NewAwardHandler(service *award.Service) *AwardHandler {
+func NewAwardHandler(service *Service) *AwardHandler {
 	return &AwardHandler{service: service}
 }
 
@@ -52,7 +51,7 @@ func (h *AwardHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, awardListResponse{Status: "success", Data: data})
 }
 
-func mapAwardResponse(record award.Award) awardResponse {
+func mapAwardResponse(record Award) awardResponse {
 	return awardResponse{
 		ID:        record.ID,
 		ImageSrc:  record.ImageSrc,
@@ -68,4 +67,13 @@ func mapAwardResponse(record award.Award) awardResponse {
 		DeletedAt: record.DeletedAt,
 		FileName:  record.FileName,
 	}
+}
+
+type errorResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+func respondError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, errorResponse{Status: "error", Message: message})
 }

@@ -1,4 +1,4 @@
-package httpapi
+package catalog
 
 import (
 	"encoding/json"
@@ -8,11 +8,12 @@ import (
 
 	"new-website-lelang/internal/domain/reference"
 	"new-website-lelang/internal/infrastructure/memory"
+	"new-website-lelang/internal/interfaces/httpapi"
 )
 
 func newTestRouter() http.Handler {
 	referenceService := reference.NewService(memory.NewReferenceRepository())
-	return NewRouter(NewReferenceHandler(referenceService), NewAssetHandler())
+	return httpapi.NewRouter(reference.NewReferenceHandler(referenceService), NewAssetHandler())
 }
 
 func TestGetAssets(t *testing.T) {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"new-website-lelang/internal/domain/award"
-	"new-website-lelang/internal/interfaces/httpapi"
 )
 
 type fakeAwardRepository struct {
@@ -25,7 +24,7 @@ func TestGetAwards(t *testing.T) {
 	service := award.NewService(fakeAwardRepository{records: []award.Award{
 		{ID: "uuid-award-1", FileName: &fileName},
 	}})
-	handler := httpapi.NewAwardHandler(service)
+	handler := award.NewAwardHandler(service)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/awards", nil)
 	recorder := httptest.NewRecorder()
 

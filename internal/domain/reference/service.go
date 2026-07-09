@@ -14,3 +14,7 @@ func NewService(repository Repository) *Service {
 func (s *Service) GetAll(ctx context.Context) (Data, error) {
 	return s.repository.GetAll(ctx)
 }
+
+func (s *Service) GetCitiesByProvinceID(ctx context.Context, provinceID string) ([]City, error) {
+	return s.repository.GetCitiesByProvinceID(ctx, provinceID)
+}

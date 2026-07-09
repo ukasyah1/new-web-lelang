@@ -19,6 +19,13 @@ type Province struct {
 	Name string
 }
 
+// City represents a city belonging to a province.
+type City struct {
+	ID         string
+	ProvinceID string
+	Name       string
+}
+
 // SalesMethod represents a supported asset sales method.
 type SalesMethod struct {
 	ID   string

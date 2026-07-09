@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -41,6 +42,10 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 		return fmt.Errorf("prepare migration history: %w", err)
 	}
 	historyDB := db.Table(historyTable)
+	appliedMigrations, err := loadAppliedMigrations(historyDB)
+	if err != nil {
+		return fmt.Errorf("load applied migrations: %w", err)
+	}
 
 	migrations := append([]Migration(nil), available...)
 	sort.Slice(migrations, func(i, j int) bool {
@@ -53,12 +58,7 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 			return err
 		}
 
-		var applied schemaMigration
-		result := historyDB.Where("VERSION = ?", item.Version).Limit(1).Find(&applied)
-		if result.Error != nil {
-			return fmt.Errorf("check migration %s: %w", item.Version, result.Error)
-		}
-		if result.RowsAffected > 0 {
+		if applied, exists := appliedMigrations[item.Version]; exists {
 			if applied.Checksum != item.Checksum {
 				if applied.Version == "001" && applied.Checksum == "v001-create-gorm-migration-example-v1" {
 					if err := historyDB.Model(&schemaMigration{}).
@@ -86,18 +86,47 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 		if err := historyDB.Create(&history).Error; err != nil {
 			return fmt.Errorf("record migration %s: %w", item.Version, err)
 		}
+		appliedMigrations[item.Version] = history
+		log.Printf("database migration applied: version=%s description=%q", item.Version, item.Description)
 	}
 
 	return nil
 }
 
+func loadAppliedMigrations(historyDB *gorm.DB) (map[string]schemaMigration, error) {
+	var rows []schemaMigration
+	if err := historyDB.Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	applied := make(map[string]schemaMigration, len(rows))
+	for _, row := range rows {
+		applied[row.Version] = row
+	}
+	return applied, nil
+}
+
 func executeSQLScript(db *gorm.DB, script string) error {
 	for _, statement := range splitSQLStatements(script) {
 		if err := db.Exec(statement).Error; err != nil {
+			if isIgnorableMigrationError(statement, err) {
+				continue
+			}
 			return err
 		}
 	}
 	return nil
+}
+
+func isIgnorableMigrationError(statement string, err error) bool {
+	normalizedStatement := strings.ToUpper(strings.TrimSpace(statement))
+	if !strings.HasPrefix(normalizedStatement, "CREATE TABLE ") {
+		return false
+	}
+
+	normalizedError := strings.ToUpper(err.Error())
+	return strings.Contains(normalizedError, "ORA-00955") ||
+		strings.Contains(normalizedError, "NAME IS ALREADY USED BY AN EXISTING OBJECT")
 }
 
 func splitSQLStatements(script string) []string {

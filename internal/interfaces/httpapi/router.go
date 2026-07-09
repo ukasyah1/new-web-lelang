@@ -6,7 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(referenceHandler *ReferenceHandler, assetHandler *AssetHandler, awardHandlers ...*AwardHandler) *gin.Engine {
+type getAllHandler interface {
+	GetAll(*gin.Context)
+}
+
+type referenceHandler interface {
+	GetAll(*gin.Context)
+	GetCitiesByProvince(*gin.Context)
+}
+
+func NewRouter(referenceHandler referenceHandler, assetHandler getAllHandler, optionalHandlers ...getAllHandler) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 	router.HandleMethodNotAllowed = true
@@ -17,9 +26,17 @@ func NewRouter(referenceHandler *ReferenceHandler, assetHandler *AssetHandler, a
 
 	api := router.Group("/api/v1")
 	api.GET("/reference-data", referenceHandler.GetAll)
+	api.GET("/master-data", referenceHandler.GetAll)
+	api.GET("/master-data/kota", referenceHandler.GetCitiesByProvince)
 	api.GET("/assets", assetHandler.GetAll)
-	if len(awardHandlers) > 0 && awardHandlers[0] != nil {
-		api.GET("/awards", awardHandlers[0].GetAll)
+	if len(optionalHandlers) > 0 && optionalHandlers[0] != nil {
+		api.GET("/awards", optionalHandlers[0].GetAll)
+	}
+	if len(optionalHandlers) > 1 && optionalHandlers[1] != nil {
+		api.GET("/faqs", optionalHandlers[1].GetAll)
+	}
+	if len(optionalHandlers) > 2 && optionalHandlers[2] != nil {
+		api.GET("/banners", optionalHandlers[2].GetAll)
 	}
 
 	router.NoMethod(func(c *gin.Context) {

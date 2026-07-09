@@ -39,3 +39,19 @@ func (r *ReferenceRepository) GetAll(_ context.Context) (reference.Data, error) 
 		},
 	}, nil
 }
+
+func (r *ReferenceRepository) GetCitiesByProvinceID(_ context.Context, provinceID string) ([]reference.City, error) {
+	cities := []reference.City{
+		{ID: "uuid-1", ProvinceID: "uuid-1", Name: "Jakarta Pusat"},
+		{ID: "uuid-2", ProvinceID: "uuid-1", Name: "Jakarta Selatan"},
+		{ID: "uuid-3", ProvinceID: "uuid-2", Name: "Bandung"},
+	}
+
+	result := make([]reference.City, 0, len(cities))
+	for _, city := range cities {
+		if city.ProvinceID == provinceID {
+			result = append(result, city)
+		}
+	}
+	return result, nil
+}

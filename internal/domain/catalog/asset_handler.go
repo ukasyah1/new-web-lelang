@@ -1,4 +1,4 @@
-package httpapi
+package catalog
 
 import (
 	"net/http"
@@ -157,4 +157,13 @@ func hardcodedAssets() []assetResponse {
 			ViewCount:    703,
 		},
 	}
+}
+
+type errorResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+func respondError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, errorResponse{Status: "error", Message: message})
 }

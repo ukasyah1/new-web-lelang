@@ -25,4 +25,12 @@ func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
 	if len(data.Categories) != 2 || len(data.AssetTypes) != 3 {
 		t.Fatalf("unexpected reference data: %+v", data)
 	}
+
+	cities, err := repository.GetCitiesByProvinceID(context.Background(), "uuid-1")
+	if err != nil {
+		t.Fatalf("get cities by province: %v", err)
+	}
+	if len(cities) != 2 || cities[0].ProvinceID != "uuid-1" {
+		t.Fatalf("unexpected cities: %+v", cities)
+	}
 }

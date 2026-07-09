@@ -12,7 +12,11 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 	"new-website-lelang/internal/domain/award"
+	"new-website-lelang/internal/domain/banner"
+	"new-website-lelang/internal/domain/catalog"
+	"new-website-lelang/internal/domain/faq"
 	"new-website-lelang/internal/domain/reference"
 	"new-website-lelang/internal/infrastructure/database"
 	"new-website-lelang/internal/interfaces/httpapi"
@@ -34,13 +38,16 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	awardHandler, err := buildAwardHandler(config)
+	db, err := openApplicationOracleDB(config)
 	if err != nil {
 		return err
 	}
-	assetHandler := httpapi.NewAssetHandler()
+	awardHandler := buildAwardHandler(db)
+	faqHandler := buildFAQHandler(db)
+	bannerHandler := buildBannerHandler(db)
+	assetHandler := catalog.NewAssetHandler()
 
-	router := httpapi.NewRouter(referenceHandler, assetHandler, awardHandler)
+	router := httpapi.NewRouter(referenceHandler, assetHandler, awardHandler, faqHandler, bannerHandler)
 	server := newHTTPServer(config.port, router)
 
 	return startAndWaitForShutdown(server, config.port)
@@ -84,7 +91,7 @@ func getEnv(key, fallback string) string {
 }
 
 // buildReferenceHandler connects database -> repository -> service -> HTTP handler.
-func buildReferenceHandler(databasePath string) (*httpapi.ReferenceHandler, error) {
+func buildReferenceHandler(databasePath string) (*reference.ReferenceHandler, error) {
 	db, err := database.OpenSQLite(databasePath)
 	if err != nil {
 		return nil, err
@@ -96,10 +103,10 @@ func buildReferenceHandler(databasePath string) (*httpapi.ReferenceHandler, erro
 	}
 
 	service := reference.NewService(repository)
-	return httpapi.NewReferenceHandler(service), nil
+	return reference.NewReferenceHandler(service), nil
 }
 
-func buildAwardHandler(config appConfig) (*httpapi.AwardHandler, error) {
+func openApplicationOracleDB(config appConfig) (*gorm.DB, error) {
 	db, err := database.OpenOracle(
 		config.databaseURL,
 		config.databaseUsername,
@@ -118,9 +125,25 @@ func buildAwardHandler(config appConfig) (*httpapi.AwardHandler, error) {
 		}
 	}
 
+	return db, nil
+}
+
+func buildAwardHandler(db *gorm.DB) *award.AwardHandler {
 	repository := database.NewAwardRepository(db)
 	service := award.NewService(repository)
-	return httpapi.NewAwardHandler(service), nil
+	return award.NewAwardHandler(service)
+}
+
+func buildFAQHandler(db *gorm.DB) *faq.FAQHandler {
+	repository := database.NewFAQRepository(db)
+	service := faq.NewService(repository)
+	return faq.NewFAQHandler(service)
+}
+
+func buildBannerHandler(db *gorm.DB) *banner.BannerHandler {
+	repository := database.NewBannerRepository(db)
+	service := banner.NewService(repository)
+	return banner.NewBannerHandler(service)
 }
 
 func newHTTPServer(port string, handler http.Handler) *http.Server {

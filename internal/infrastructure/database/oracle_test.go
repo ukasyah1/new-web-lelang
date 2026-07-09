@@ -6,7 +6,7 @@ import (
 )
 
 func TestOracleDSNFromJDBCURL(t *testing.T) {
-	dsn, err := oracleDSN(
+	dsn, err := BuildOracleDSN(
 		"jdbc:oracle:thin:@//localhost:1521/FREEPDB1",
 		"test-user",
 		"test-password",
@@ -23,7 +23,7 @@ func TestOracleDSNFromJDBCURL(t *testing.T) {
 }
 
 func TestOracleDSNRejectsInvalidURL(t *testing.T) {
-	if _, err := oracleDSN("localhost", "user", "password"); err == nil {
+	if _, err := BuildOracleDSN("localhost", "user", "password"); err == nil {
 		t.Fatal("expected invalid URL error")
 	}
 }

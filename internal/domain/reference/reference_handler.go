@@ -1,17 +1,17 @@
-package httpapi
+package reference
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"new-website-lelang/internal/domain/reference"
 )
 
 type ReferenceHandler struct {
-	service *reference.Service
+	service *Service
 }
 
-func NewReferenceHandler(service *reference.Service) *ReferenceHandler {
+func NewReferenceHandler(service *Service) *ReferenceHandler {
 	return &ReferenceHandler{service: service}
 }
 
@@ -29,6 +29,12 @@ type assetTypeResponse struct {
 type provinceResponse struct {
 	ID   string `json:"id"`
 	Name string `json:"nama_provinsi"`
+}
+
+type cityResponse struct {
+	ID         string `json:"id"`
+	ProvinceID string `json:"provinsi_id"`
+	Name       string `json:"nama_kota"`
 }
 
 type salesMethodResponse struct {
@@ -55,6 +61,11 @@ type referenceResponse struct {
 	Data   referenceDataResponse `json:"data"`
 }
 
+type citiesResponse struct {
+	Status string         `json:"status"`
+	Data   []cityResponse `json:"data"`
+}
+
 func (h *ReferenceHandler) GetAll(c *gin.Context) {
 	data, err := h.service.GetAll(c.Request.Context())
 	if err != nil {
@@ -68,7 +79,26 @@ func (h *ReferenceHandler) GetAll(c *gin.Context) {
 	})
 }
 
-func mapReferenceData(data reference.Data) referenceDataResponse {
+func (h *ReferenceHandler) GetCitiesByProvince(c *gin.Context) {
+	provinceID := strings.TrimSpace(c.Query("provinsi_id"))
+	if provinceID == "" {
+		respondError(c, http.StatusBadRequest, "provinsi_id wajib diisi")
+		return
+	}
+
+	cities, err := h.service.GetCitiesByProvinceID(c.Request.Context(), provinceID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	c.JSON(http.StatusOK, citiesResponse{
+		Status: "success",
+		Data:   mapCities(cities),
+	})
+}
+
+func mapReferenceData(data Data) referenceDataResponse {
 	result := referenceDataResponse{
 		Categories:   make([]categoryResponse, len(data.Categories)),
 		AssetTypes:   make([]assetTypeResponse, len(data.AssetTypes)),
@@ -94,4 +124,21 @@ func mapReferenceData(data reference.Data) referenceDataResponse {
 	}
 
 	return result
+}
+
+func mapCities(cities []City) []cityResponse {
+	result := make([]cityResponse, len(cities))
+	for i, item := range cities {
+		result[i] = cityResponse{ID: item.ID, ProvinceID: item.ProvinceID, Name: item.Name}
+	}
+	return result
+}
+
+type errorResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+func respondError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, errorResponse{Status: "error", Message: message})
 }
