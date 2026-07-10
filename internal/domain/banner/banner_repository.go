@@ -1,11 +1,10 @@
-package database
+package banner
 
 import (
 	"context"
 	"fmt"
 
 	"gorm.io/gorm"
-	"new-website-lelang/internal/domain/banner"
 )
 
 type bannerRow struct {
@@ -23,7 +22,7 @@ func NewBannerRepository(db *gorm.DB) *BannerRepository {
 	return &BannerRepository{db: db}
 }
 
-func (r *BannerRepository) GetActive(ctx context.Context) ([]banner.Banner, error) {
+func (r *BannerRepository) GetActive(ctx context.Context) ([]Banner, error) {
 	rows := []bannerRow{}
 	result := r.db.WithContext(ctx).Raw(`
 		SELECT ID,
@@ -37,9 +36,9 @@ func (r *BannerRepository) GetActive(ctx context.Context) ([]banner.Banner, erro
 		return nil, fmt.Errorf("query CMS.BANNER_SLIDER_PROMOSI: %w", result.Error)
 	}
 
-	banners := make([]banner.Banner, len(rows))
+	banners := make([]Banner, len(rows))
 	for i, row := range rows {
-		banners[i] = banner.Banner{
+		banners[i] = Banner{
 			ID:         row.ID,
 			ImageURL:   row.ImageURL,
 			TargetURL:  row.TargetURL,

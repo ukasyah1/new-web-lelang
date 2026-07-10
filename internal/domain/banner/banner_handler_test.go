@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"new-website-lelang/internal/domain/assets"
 	"new-website-lelang/internal/domain/banner"
-	"new-website-lelang/internal/domain/catalog"
-	"new-website-lelang/internal/domain/reference"
+	reference "new-website-lelang/internal/domain/masterdata"
 	"new-website-lelang/internal/infrastructure/memory"
 	"new-website-lelang/internal/interfaces/httpapi"
 )
@@ -18,7 +18,7 @@ func TestGetActiveBanners(t *testing.T) {
 	bannerService := banner.NewService(memory.NewBannerRepository())
 	router := httpapi.NewRouter(
 		reference.NewReferenceHandler(referenceService),
-		catalog.NewAssetHandler(),
+		assets.NewAssetHandler(),
 		nil,
 		nil,
 		banner.NewBannerHandler(bannerService),

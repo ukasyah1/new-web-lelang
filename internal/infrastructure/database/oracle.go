@@ -11,6 +11,7 @@ import (
 
 	oracle "github.com/godoes/gorm-oracle"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func OpenOracle(jdbcURL, username, password string) (*gorm.DB, error) {
@@ -23,7 +24,9 @@ func OpenOracle(jdbcURL, username, password string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db, err := gorm.Open(oracle.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(oracle.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("open Oracle database: %w", err)
 	}

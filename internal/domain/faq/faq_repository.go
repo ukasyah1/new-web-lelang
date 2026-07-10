@@ -1,11 +1,10 @@
-package database
+package faq
 
 import (
 	"context"
 	"fmt"
 
 	"gorm.io/gorm"
-	"new-website-lelang/internal/domain/faq"
 )
 
 type faqRow struct {
@@ -24,7 +23,7 @@ func NewFAQRepository(db *gorm.DB) *FAQRepository {
 	return &FAQRepository{db: db}
 }
 
-func (r *FAQRepository) GetAll(ctx context.Context, lang string) ([]faq.Category, error) {
+func (r *FAQRepository) GetAll(ctx context.Context, lang string) ([]Category, error) {
 	categoryNameColumn, questionColumn, answerColumn := faqLanguageColumns(lang)
 	rows := []faqRow{}
 	result := r.db.WithContext(ctx).Raw(fmt.Sprintf(`
@@ -51,8 +50,8 @@ func faqLanguageColumns(lang string) (string, string, string) {
 	return "NAMA_KATEGORI_ID", "QUESTION_ID", "ANSWER_ID"
 }
 
-func mapFAQRows(rows []faqRow) []faq.Category {
-	categories := make([]faq.Category, 0)
+func mapFAQRows(rows []faqRow) []Category {
+	categories := make([]Category, 0)
 	categoryIndexes := make(map[string]int)
 
 	for _, row := range rows {
@@ -60,14 +59,14 @@ func mapFAQRows(rows []faqRow) []faq.Category {
 		if !exists {
 			index = len(categories)
 			categoryIndexes[row.CategoryID] = index
-			categories = append(categories, faq.Category{
+			categories = append(categories, Category{
 				ID:   row.CategoryID,
 				Name: row.CategoryName,
-				FAQs: []faq.FAQ{},
+				FAQs: []FAQ{},
 			})
 		}
 
-		categories[index].FAQs = append(categories[index].FAQs, faq.FAQ{
+		categories[index].FAQs = append(categories[index].FAQs, FAQ{
 			ID:       row.FAQID,
 			Question: row.Question,
 			Answer:   row.Answer,

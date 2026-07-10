@@ -73,7 +73,7 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 			continue
 		}
 
-		if err := executeSQLScript(db, item.SQL); err != nil {
+		if err := executeSQLScript(db, applyMigrationSchema(item.SQL, schema)); err != nil {
 			return fmt.Errorf("apply migration %s (%s): %w", item.Version, item.Description, err)
 		}
 
@@ -91,6 +91,13 @@ func RunMigrations(db *gorm.DB, schema string, available []Migration) error {
 	}
 
 	return nil
+}
+
+func applyMigrationSchema(sql, schema string) string {
+	if schema == "" {
+		return strings.ReplaceAll(sql, "CMS.", "")
+	}
+	return strings.ReplaceAll(sql, "CMS.", schema+".")
 }
 
 func loadAppliedMigrations(historyDB *gorm.DB) (map[string]schemaMigration, error) {
@@ -210,6 +217,8 @@ func qualifiedTable(schema, table string) string {
 	}
 	return schema + "." + table
 }
+
+func QualifiedTable(schema, table string) string { return qualifiedTable(schema, table) }
 
 func prepareMigrationHistory(db *gorm.DB, schema, table string) error {
 	if schema == "" {

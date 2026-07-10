@@ -13,11 +13,14 @@ import (
 
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
+	"new-website-lelang/internal/domain/assets"
 	"new-website-lelang/internal/domain/award"
 	"new-website-lelang/internal/domain/banner"
-	"new-website-lelang/internal/domain/catalog"
+	"new-website-lelang/internal/domain/catalogs"
 	"new-website-lelang/internal/domain/faq"
-	"new-website-lelang/internal/domain/reference"
+	"new-website-lelang/internal/domain/masterdata"
+	"new-website-lelang/internal/domain/schedules"
+	"new-website-lelang/internal/domain/settings"
 	"new-website-lelang/internal/infrastructure/database"
 	"new-website-lelang/internal/interfaces/httpapi"
 )
@@ -34,20 +37,20 @@ func main() {
 func run() error {
 	config := loadConfig()
 
-	referenceHandler, err := buildReferenceHandler(config.sqlitePath)
-	if err != nil {
-		return err
-	}
 	db, err := openApplicationOracleDB(config)
 	if err != nil {
 		return err
 	}
+	referenceHandler := buildMasterDataHandler(db, config.migrationSchema)
 	awardHandler := buildAwardHandler(db)
 	faqHandler := buildFAQHandler(db)
 	bannerHandler := buildBannerHandler(db)
-	assetHandler := catalog.NewAssetHandler()
+	catalogHandler := buildCatalogHandler(db, config.migrationSchema)
+	scheduleHandler := buildScheduleHandler(db, config.migrationSchema)
+	settingsHandler := buildSettingsHandler(db, config.migrationSchema)
+	assetHandler := buildAssetHandler(db)
 
-	router := httpapi.NewRouter(referenceHandler, assetHandler, awardHandler, faqHandler, bannerHandler)
+	router := httpapi.NewRouter(referenceHandler, assetHandler, awardHandler, faqHandler, bannerHandler, catalogHandler, scheduleHandler, settingsHandler)
 	server := newHTTPServer(config.port, router)
 
 	return startAndWaitForShutdown(server, config.port)
@@ -91,19 +94,10 @@ func getEnv(key, fallback string) string {
 }
 
 // buildReferenceHandler connects database -> repository -> service -> HTTP handler.
-func buildReferenceHandler(databasePath string) (*reference.ReferenceHandler, error) {
-	db, err := database.OpenSQLite(databasePath)
-	if err != nil {
-		return nil, err
-	}
-
-	repository := database.NewReferenceRepository(db)
-	if err := repository.Prepare(); err != nil {
-		return nil, fmt.Errorf("prepare reference repository: %w", err)
-	}
-
-	service := reference.NewService(repository)
-	return reference.NewReferenceHandler(service), nil
+func buildMasterDataHandler(db *gorm.DB, schema string) *masterdata.ReferenceHandler {
+	repository := masterdata.NewMasterDataRepository(db, schema)
+	service := masterdata.NewService(repository)
+	return masterdata.NewReferenceHandler(service)
 }
 
 func openApplicationOracleDB(config appConfig) (*gorm.DB, error) {
@@ -129,21 +123,45 @@ func openApplicationOracleDB(config appConfig) (*gorm.DB, error) {
 }
 
 func buildAwardHandler(db *gorm.DB) *award.AwardHandler {
-	repository := database.NewAwardRepository(db)
+	repository := award.NewAwardRepository(db)
 	service := award.NewService(repository)
 	return award.NewAwardHandler(service)
 }
 
 func buildFAQHandler(db *gorm.DB) *faq.FAQHandler {
-	repository := database.NewFAQRepository(db)
+	repository := faq.NewFAQRepository(db)
 	service := faq.NewService(repository)
 	return faq.NewFAQHandler(service)
 }
 
 func buildBannerHandler(db *gorm.DB) *banner.BannerHandler {
-	repository := database.NewBannerRepository(db)
+	repository := banner.NewBannerRepository(db)
 	service := banner.NewService(repository)
 	return banner.NewBannerHandler(service)
+}
+
+func buildCatalogHandler(db *gorm.DB, schema string) *catalogs.CatalogHandler {
+	repository := catalogs.NewCatalogRepository(db, schema)
+	service := catalogs.NewService(repository)
+	return catalogs.NewCatalogHandler(service)
+}
+
+func buildScheduleHandler(db *gorm.DB, schema string) *schedules.Handler {
+	repository := schedules.NewScheduleRepository(db, schema)
+	service := schedules.NewService(repository)
+	return schedules.NewHandler(service)
+}
+
+func buildSettingsHandler(db *gorm.DB, schema string) *settings.Handler {
+	repository := settings.NewSettingsRepository(db, schema)
+	service := settings.NewService(repository)
+	return settings.NewHandler(service)
+}
+
+func buildAssetHandler(db *gorm.DB) *assets.AssetHandler {
+	repository := assets.NewAssetRepository(db)
+	service := assets.NewService(repository)
+	return assets.NewAssetHandler(service)
 }
 
 func newHTTPServer(port string, handler http.Handler) *http.Server {

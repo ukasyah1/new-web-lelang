@@ -102,11 +102,16 @@ func TestLoadExampleSQLMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load SQL migrations: %v", err)
 	}
-	if len(migrations) != 4 ||
+	if len(migrations) != 9 ||
 		migrations[0].Version != "001" ||
 		migrations[1].Version != "002" ||
 		migrations[2].Version != "003" ||
-		migrations[3].Version != "004" {
+		migrations[3].Version != "004" ||
+		migrations[4].Version != "005" ||
+		migrations[5].Version != "006" ||
+		migrations[6].Version != "007" ||
+		migrations[7].Version != "008" ||
+		migrations[8].Version != "009" {
 		t.Fatalf("unexpected migrations: %+v", migrations)
 	}
 	for _, migration := range migrations {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"new-website-lelang/internal/domain/masterdata"
 	"new-website-lelang/internal/infrastructure/database"
 )
 
@@ -13,12 +14,12 @@ func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
 		t.Fatalf("open test database: %v", err)
 	}
 
-	repository := database.NewReferenceRepository(db)
+	repository := masterdata.NewReferenceRepository(db)
 	if err := repository.Prepare(); err != nil {
 		t.Fatalf("prepare repository: %v", err)
 	}
 
-	data, err := repository.GetAll(context.Background())
+	data, err := repository.GetAll(context.Background(), "")
 	if err != nil {
 		t.Fatalf("get reference data: %v", err)
 	}
@@ -26,7 +27,7 @@ func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
 		t.Fatalf("unexpected reference data: %+v", data)
 	}
 
-	cities, err := repository.GetCitiesByProvinceID(context.Background(), "uuid-1")
+	cities, err := repository.GetCitiesByProvinceID(context.Background(), "uuid-1", "")
 	if err != nil {
 		t.Fatalf("get cities by province: %v", err)
 	}

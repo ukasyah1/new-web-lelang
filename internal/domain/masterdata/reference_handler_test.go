@@ -1,4 +1,4 @@
-package reference_test
+package masterdata_test
 
 import (
 	"encoding/json"
@@ -6,15 +6,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"new-website-lelang/internal/domain/catalog"
-	"new-website-lelang/internal/domain/reference"
+	"new-website-lelang/internal/domain/assets"
+	reference "new-website-lelang/internal/domain/masterdata"
 	"new-website-lelang/internal/infrastructure/memory"
 	"new-website-lelang/internal/interfaces/httpapi"
 )
 
 func TestGetReferenceData(t *testing.T) {
 	service := reference.NewService(memory.NewReferenceRepository())
-	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/reference-data", nil)
 	recorder := httptest.NewRecorder()
 
@@ -57,7 +57,7 @@ func TestGetReferenceData(t *testing.T) {
 
 func TestGetMasterData(t *testing.T) {
 	service := reference.NewService(memory.NewReferenceRepository())
-	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data", nil)
 	recorder := httptest.NewRecorder()
 
@@ -105,9 +105,36 @@ func TestGetMasterData(t *testing.T) {
 	}
 }
 
+func TestGetMasterDataFiltersByValue(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data?value=menteng", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response struct {
+		Data struct {
+			Districts []struct {
+				Name string `json:"nama_kecamatan"`
+			} `json:"kecamatan"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(response.Data.Districts) != 1 || response.Data.Districts[0].Name != "Menteng" {
+		t.Fatalf("unexpected filtered districts: %+v", response.Data.Districts)
+	}
+}
+
 func TestGetCitiesByProvince(t *testing.T) {
 	service := reference.NewService(memory.NewReferenceRepository())
-	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data/kota?provinsi_id=uuid-1", nil)
 	recorder := httptest.NewRecorder()
 
@@ -138,9 +165,34 @@ func TestGetCitiesByProvince(t *testing.T) {
 	}
 }
 
+func TestGetCitiesByProvinceFiltersByValue(t *testing.T) {
+	service := reference.NewService(memory.NewReferenceRepository())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data/kota?provinsi_id=uuid-1&value=selatan", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response struct {
+		Data []struct {
+			Name string `json:"nama_kota"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(response.Data) != 1 || response.Data[0].Name != "Jakarta Selatan" {
+		t.Fatalf("unexpected filtered cities: %+v", response.Data)
+	}
+}
+
 func TestGetCitiesByProvinceRequiresProvinceID(t *testing.T) {
 	service := reference.NewService(memory.NewReferenceRepository())
-	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/master-data/kota", nil)
 	recorder := httptest.NewRecorder()
 
@@ -153,7 +205,7 @@ func TestGetCitiesByProvinceRequiresProvinceID(t *testing.T) {
 
 func TestReferenceDataRejectsUnsupportedMethod(t *testing.T) {
 	service := reference.NewService(memory.NewReferenceRepository())
-	router := httpapi.NewRouter(reference.NewReferenceHandler(service), catalog.NewAssetHandler())
+	router := httpapi.NewRouter(reference.NewReferenceHandler(service), assets.NewAssetHandler())
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/reference-data", nil)
 	recorder := httptest.NewRecorder()
 

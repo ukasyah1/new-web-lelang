@@ -1,4 +1,4 @@
-package database
+package award
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"new-website-lelang/internal/domain/award"
 )
 
 type awardModel struct {
@@ -33,7 +32,7 @@ func NewAwardRepository(db *gorm.DB) *AwardRepository {
 	return &AwardRepository{db: db}
 }
 
-func (r *AwardRepository) GetAll(ctx context.Context) ([]award.Award, error) {
+func (r *AwardRepository) GetAll(ctx context.Context) ([]Award, error) {
 	var models []awardModel
 	result := r.db.WithContext(ctx).Raw(`
 		SELECT ID, IMG_SRC, INPUT_DATE, SEQ, STATUS,
@@ -46,9 +45,9 @@ func (r *AwardRepository) GetAll(ctx context.Context) ([]award.Award, error) {
 		return nil, fmt.Errorf("query CMS.MST_AWARDS: %w", result.Error)
 	}
 
-	records := make([]award.Award, len(models))
+	records := make([]Award, len(models))
 	for i, model := range models {
-		records[i] = award.Award{
+		records[i] = Award{
 			ID:        model.ID,
 			ImageSrc:  model.ImageSrc,
 			InputDate: model.InputDate,

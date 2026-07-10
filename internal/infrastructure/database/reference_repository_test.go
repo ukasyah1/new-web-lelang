@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"testing"
+
+	"new-website-lelang/internal/domain/masterdata"
 )
 
 func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
@@ -11,12 +13,12 @@ func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
 		t.Fatalf("open test database: %v", err)
 	}
 
-	repository := NewReferenceRepository(db)
+	repository := masterdata.NewReferenceRepository(db)
 	if err := repository.Prepare(); err != nil {
 		t.Fatalf("prepare repository: %v", err)
 	}
 
-	data, err := repository.GetAll(context.Background())
+	data, err := repository.GetAll(context.Background(), "")
 	if err != nil {
 		t.Fatalf("get reference data: %v", err)
 	}
@@ -28,7 +30,7 @@ func TestReferenceRepositoryPrepareAndGetAll(t *testing.T) {
 		t.Fatalf("expected 3 asset types, got %d", len(data.AssetTypes))
 	}
 
-	cities, err := repository.GetCitiesByProvinceID(context.Background(), "uuid-1")
+	cities, err := repository.GetCitiesByProvinceID(context.Background(), "uuid-1", "")
 	if err != nil {
 		t.Fatalf("get cities by province: %v", err)
 	}

@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"testing"
+
+	"new-website-lelang/internal/domain/banner"
 )
 
 func TestBannerRepositoryGetActive(t *testing.T) {
@@ -32,7 +34,7 @@ func TestBannerRepositoryGetActive(t *testing.T) {
 		t.Fatalf("seed banner table: %v", err)
 	}
 
-	banners, err := NewBannerRepository(db).GetActive(context.Background())
+	banners, err := banner.NewBannerRepository(db).GetActive(context.Background())
 	if err != nil {
 		t.Fatalf("get active banners: %v", err)
 	}

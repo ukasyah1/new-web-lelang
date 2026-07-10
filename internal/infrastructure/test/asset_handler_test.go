@@ -33,7 +33,7 @@ func TestGetAssets(t *testing.T) {
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.Status != "success" || response.Meta.TotalData != 45 || response.Meta.TotalPages != 5 {
+	if response.Status != "success" || response.Meta.TotalData != 1 || response.Meta.TotalPages != 1 {
 		t.Fatalf("unexpected response: %+v", response)
 	}
 	if len(response.Data) != 1 || response.Data[0].CollateralCode != "AG-JKT-001" {

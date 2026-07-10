@@ -1,4 +1,4 @@
-package reference
+package masterdata
 
 import (
 	"net/http"
@@ -37,6 +37,12 @@ type cityResponse struct {
 	Name       string `json:"nama_kota"`
 }
 
+type districtResponse struct {
+	ID     string `json:"id"`
+	CityID string `json:"kota_id"`
+	Name   string `json:"nama_kecamatan"`
+}
+
 type salesMethodResponse struct {
 	ID   string `json:"id"`
 	Name string `json:"nama_metode"`
@@ -52,6 +58,7 @@ type referenceDataResponse struct {
 	Categories   []categoryResponse    `json:"kategori"`
 	AssetTypes   []assetTypeResponse   `json:"tipe_aset"`
 	Provinces    []provinceResponse    `json:"provinsi"`
+	Districts    []districtResponse    `json:"kecamatan"`
 	SalesMethods []salesMethodResponse `json:"metode_penjualan"`
 	KPKNLs       []kpknlResponse       `json:"kpknl"`
 }
@@ -67,7 +74,7 @@ type citiesResponse struct {
 }
 
 func (h *ReferenceHandler) GetAll(c *gin.Context) {
-	data, err := h.service.GetAll(c.Request.Context())
+	data, err := h.service.GetAll(c.Request.Context(), strings.TrimSpace(c.Query("value")))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "internal server error")
 		return
@@ -86,7 +93,7 @@ func (h *ReferenceHandler) GetCitiesByProvince(c *gin.Context) {
 		return
 	}
 
-	cities, err := h.service.GetCitiesByProvinceID(c.Request.Context(), provinceID)
+	cities, err := h.service.GetCitiesByProvinceID(c.Request.Context(), provinceID, strings.TrimSpace(c.Query("value")))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "internal server error")
 		return
@@ -98,11 +105,40 @@ func (h *ReferenceHandler) GetCitiesByProvince(c *gin.Context) {
 	})
 }
 
+func (h *ReferenceHandler) GetDistrictsByCity(c *gin.Context) {
+	cityID := strings.TrimSpace(c.Query("kota_id"))
+	if cityID == "" {
+		respondError(c, http.StatusBadRequest, "kota_id wajib diisi")
+		return
+	}
+	districts, err := h.service.GetDistrictsByCityID(c.Request.Context(), cityID, strings.TrimSpace(c.Query("value")))
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "internal server error")
+		return
+	}
+	result := make([]districtResponse, len(districts))
+	for i, item := range districts {
+		result[i] = districtResponse{ID: item.ID, CityID: item.CityID, Name: item.Name}
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": result})
+}
+
+func (h *ReferenceHandler) GetProvinces(c *gin.Context) {
+	provinces, err := h.service.GetProvinces(c.Request.Context(), strings.TrimSpace(c.Query("value")))
+	if err != nil { respondError(c, http.StatusInternalServerError, "internal server error"); return }
+	result := make([]provinceResponse, len(provinces))
+	for i, item := range provinces { result[i] = provinceResponse{ID: item.ID, Name: item.Name} }
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": result})
+}
+func (h *ReferenceHandler) GetCategories(c *gin.Context) { data, err := h.service.GetCategories(c.Request.Context(), strings.TrimSpace(c.Query("value"))); if err != nil { respondError(c, 500, "internal server error"); return }; c.JSON(200, gin.H{"status":"success","data":data}) }
+func (h *ReferenceHandler) GetAssetTypes(c *gin.Context) { data, err := h.service.GetAssetTypes(c.Request.Context(), strings.TrimSpace(c.Query("value"))); if err != nil { respondError(c, 500, "internal server error"); return }; c.JSON(200, gin.H{"status":"success","data":data}) }
+
 func mapReferenceData(data Data) referenceDataResponse {
 	result := referenceDataResponse{
 		Categories:   make([]categoryResponse, len(data.Categories)),
 		AssetTypes:   make([]assetTypeResponse, len(data.AssetTypes)),
 		Provinces:    make([]provinceResponse, len(data.Provinces)),
+		Districts:    make([]districtResponse, len(data.Districts)),
 		SalesMethods: make([]salesMethodResponse, len(data.SalesMethods)),
 		KPKNLs:       make([]kpknlResponse, len(data.KPKNLs)),
 	}
@@ -115,6 +151,9 @@ func mapReferenceData(data Data) referenceDataResponse {
 	}
 	for i, item := range data.Provinces {
 		result.Provinces[i] = provinceResponse{ID: item.ID, Name: item.Name}
+	}
+	for i, item := range data.Districts {
+		result.Districts[i] = districtResponse{ID: item.ID, CityID: item.CityID, Name: item.Name}
 	}
 	for i, item := range data.SalesMethods {
 		result.SalesMethods[i] = salesMethodResponse{ID: item.ID, Name: item.Name}

@@ -1,4 +1,4 @@
-package reference
+package masterdata
 
 // Category represents an auction asset category.
 type Category struct {
@@ -26,6 +26,13 @@ type City struct {
 	Name       string
 }
 
+// District represents a district belonging to a city.
+type District struct {
+	ID     string
+	CityID string
+	Name   string
+}
+
 // SalesMethod represents a supported asset sales method.
 type SalesMethod struct {
 	ID   string
@@ -44,6 +51,7 @@ type Data struct {
 	Categories   []Category
 	AssetTypes   []AssetType
 	Provinces    []Province
+	Districts    []District
 	SalesMethods []SalesMethod
 	KPKNLs       []KPKNL
 }
