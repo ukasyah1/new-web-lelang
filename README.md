@@ -27,7 +27,7 @@ docker build -t lelang-api .
 docker run --rm -p 8080:8080 lelang-api
 ```
 
-Port default untuk local adalah `80`. Docker tetap menggunakan port `8080`. Database SQLite otomatis dibuat sebagai `lelang.db` dan tabel serta data awal dibuat saat aplikasi pertama kali berjalan.
+Port default untuk local adalah `80`. Image Docker menggunakan port `8080`.
 
 Konfigurasi opsional:
 
@@ -40,6 +40,64 @@ DATABASE_PASSWORD=your-password
 RUN_MIGRATIONS=false
 MIGRATION_SCHEMA=CMS
 ```
+
+## Deploy: build source di server dengan Docker Compose
+
+Server hanya membutuhkan Git, Docker, dan Docker Compose. Go tidak perlu di-install
+di server karena proses `go build` dijalankan oleh stage builder di `Dockerfile`.
+
+Project ini sudah membaca konfigurasi Oracle dari environment variable. Redis tidak
+ditambahkan karena aplikasi saat ini tidak menggunakannya.
+
+1. Pastikan Oracle sudah berjalan dan tergabung ke external network yang sama.
+
+   ```bash
+   docker network create shared-network
+   ```
+
+   Perintah tersebut cukup dijalankan sekali. Jika network sudah ada, Docker akan
+   menampilkan pesan bahwa network sudah tersedia.
+
+2. Clone source di server dan buat `.env` produksi dari contoh. Jangan commit `.env`.
+
+   ```bash
+   cd /opt
+   git clone URL_REPOSITORY new-web-lelang
+   cd new-web-lelang
+   cp .env.example .env
+   nano .env
+   ```
+
+   Isi `DATABASE_URL` dengan hostname container Oracle pada `shared-network`, bukan
+   `localhost`. Contoh: `jdbc:oracle:thin:@//shared-oracle:1521/XEPDB1`.
+
+3. Validasi, build image dari source, dan jalankan container.
+
+   ```bash
+   docker-compose -f docker-compose.yaml config
+   docker-compose -f docker-compose.yaml up -d --build
+   docker logs -f new-web-lelang-api
+   ```
+
+   Compose memetakan port server `8081` ke port aplikasi `8080`. Tes dengan:
+
+   ```bash
+   curl http://localhost:8081/health
+   ```
+
+4. Untuk deployment berikutnya:
+
+   ```bash
+   cd /opt/new-web-lelang
+   git pull origin main
+   docker-compose -f docker-compose.yaml up -d --build
+   docker logs -f new-web-lelang-api
+   ```
+
+Jika server memakai Compose v2, perintah yang sama dapat ditulis sebagai
+`docker compose` (tanpa tanda hubung). `RUN_MIGRATIONS` sebaiknya tetap `false`
+untuk startup normal dan hanya diaktifkan secara terkontrol saat migration memang
+akan dijalankan.
 
 ## Database migration
 
